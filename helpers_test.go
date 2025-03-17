@@ -4,11 +4,12 @@
 package check_test
 
 import (
-	"gopkg.in/check.v1"
 	"os"
 	"reflect"
 	"runtime"
 	"sync"
+
+	check "github.com/khulnasoft/checkmate"
 )
 
 var helpersS = check.Suite(&HelpersS{})
@@ -411,7 +412,7 @@ func (s *MkDirHelper) TearDownSuite(c *check.C) {
 func (s *HelpersS) TestMkDir(c *check.C) {
 	helper := MkDirHelper{}
 	output := String{}
-	check.Run(&helper, &check.RunConf{Output: &output})
+	check.Run(c.T, &helper, &check.RunConf{Output: &output})
 	c.Assert(output.value, check.Equals, "")
 	c.Check(helper.isDir1, check.Equals, true)
 	c.Check(helper.isDir2, check.Equals, true)
@@ -470,7 +471,7 @@ func (s *TestNameHelper) TearDownSuite(c *check.C) { s.name5 = c.TestName() }
 func (s *HelpersS) TestTestName(c *check.C) {
 	helper := TestNameHelper{}
 	output := String{}
-	check.Run(&helper, &check.RunConf{Output: &output})
+	check.Run(c.T, &helper, &check.RunConf{Output: &output})
 	c.Check(helper.name1, check.Equals, "")
 	c.Check(helper.name2, check.Equals, "TestNameHelper.Test")
 	c.Check(helper.name3, check.Equals, "TestNameHelper.Test")

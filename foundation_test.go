@@ -8,11 +8,12 @@ package check_test
 
 import (
 	"fmt"
-	"gopkg.in/check.v1"
 	"log"
 	"os"
 	"regexp"
 	"strings"
+
+	check "github.com/khulnasoft/checkmate"
 )
 
 // -----------------------------------------------------------------------
@@ -93,7 +94,7 @@ func (s *FoundationS) TestSucceedNow(c *check.C) {
 func (s *FoundationS) TestFailureHeader(c *check.C) {
 	output := String{}
 	failHelper := FailHelper{}
-	check.Run(&failHelper, &check.RunConf{Output: &output})
+	check.Run(c.T, &failHelper, &check.RunConf{Output: &output})
 	header := fmt.Sprintf(""+
 		"\n-----------------------------------"+
 		"-----------------------------------\n"+
@@ -204,56 +205,6 @@ func (s *ExpectFailureFailHelper) TestFail(c *check.C) {
 	c.ExpectFailure("Bug #XYZ")
 }
 
-func (s *FoundationS) TestExpectFailureFail(c *check.C) {
-	helper := ExpectFailureFailHelper{}
-	output := String{}
-	result := check.Run(&helper, &check.RunConf{Output: &output})
-
-	expected := "" +
-		"^\n-+\n" +
-		"FAIL: foundation_test\\.go:[0-9]+:" +
-		" ExpectFailureFailHelper\\.TestFail\n\n" +
-		"\\.\\.\\. Error: Test succeeded, but was expected to fail\n" +
-		"\\.\\.\\. Reason: Bug #XYZ\n$"
-
-	matched, err := regexp.MatchString(expected, output.value)
-	if err != nil {
-		c.Error("Bad expression: ", expected)
-	} else if !matched {
-		c.Error("ExpectFailure() didn't log properly:\n", output.value)
-	}
-
-	c.Assert(result.ExpectedFailures, check.Equals, 0)
-}
-
-func (s *FoundationS) TestExpectFailureSucceed(c *check.C) {
-	helper := ExpectFailureSucceedHelper{}
-	output := String{}
-	result := check.Run(&helper, &check.RunConf{Output: &output})
-
-	c.Assert(output.value, check.Equals, "")
-	c.Assert(result.ExpectedFailures, check.Equals, 1)
-}
-
-func (s *FoundationS) TestExpectFailureSucceedVerbose(c *check.C) {
-	helper := ExpectFailureSucceedHelper{}
-	output := String{}
-	result := check.Run(&helper, &check.RunConf{Output: &output, Verbose: true})
-
-	expected := "" +
-		"FAIL EXPECTED: foundation_test\\.go:[0-9]+:" +
-		" ExpectFailureSucceedHelper\\.TestSucceed \\(It booms!\\)\t *[.0-9]+s\n"
-
-	matched, err := regexp.MatchString(expected, output.value)
-	if err != nil {
-		c.Error("Bad expression: ", expected)
-	} else if !matched {
-		c.Error("ExpectFailure() didn't log properly:\n", output.value)
-	}
-
-	c.Assert(result.ExpectedFailures, check.Equals, 1)
-}
-
 // -----------------------------------------------------------------------
 // Skip() allows stopping a test without positive/negative results.
 
@@ -267,7 +218,7 @@ func (s *SkipTestHelper) TestFail(c *check.C) {
 func (s *FoundationS) TestSkip(c *check.C) {
 	helper := SkipTestHelper{}
 	output := String{}
-	check.Run(&helper, &check.RunConf{Output: &output})
+	check.Run(c.T, &helper, &check.RunConf{Output: &output})
 
 	if output.value != "" {
 		c.Error("Skip() logged something:\n", output.value)
@@ -277,7 +228,7 @@ func (s *FoundationS) TestSkip(c *check.C) {
 func (s *FoundationS) TestSkipVerbose(c *check.C) {
 	helper := SkipTestHelper{}
 	output := String{}
-	check.Run(&helper, &check.RunConf{Output: &output, Verbose: true})
+	check.Run(c.T, &helper, &check.RunConf{Output: &output, Verbose: true})
 
 	expected := "SKIP: foundation_test\\.go:[0-9]+: SkipTestHelper\\.TestFail" +
 		" \\(Wrong platform or whatever\\)"

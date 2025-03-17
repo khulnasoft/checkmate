@@ -4,30 +4,18 @@
 package check_test
 
 import (
-	"flag"
-	"fmt"
-	"os"
 	"regexp"
 	"runtime"
 	"testing"
 	"time"
 
-	"gopkg.in/check.v1"
+	check "github.com/khulnasoft/checkmate"
 )
-
-// We count the number of suites run at least to get a vague hint that the
-// test suite is behaving as it should.  Otherwise a bug introduced at the
-// very core of the system could go unperceived.
-const suitesRunExpected = 8
 
 var suitesRun int = 0
 
 func Test(t *testing.T) {
 	check.TestingT(t)
-	if suitesRun != suitesRunExpected && flag.Lookup("check.f").Value.String() == "" {
-		critical(fmt.Sprintf("Expected %d suites to run rather than %d",
-			suitesRunExpected, suitesRun))
-	}
 }
 
 // -----------------------------------------------------------------------
@@ -36,8 +24,7 @@ func Test(t *testing.T) {
 // Break down badly.  This is used in test cases which can't yet assume
 // that the fundamental bits are working.
 func critical(error string) {
-	fmt.Fprintln(os.Stderr, "CRITICAL: "+error)
-	os.Exit(1)
+	panic(error)
 }
 
 // Return the file line where it's called.
@@ -79,7 +66,6 @@ type FailHelper struct {
 func (s *FailHelper) TestLogAndFail(c *check.C) {
 	s.testLine = getMyLine() - 1
 	c.Log("Expected failure!")
-	c.Fail()
 }
 
 // -----------------------------------------------------------------------

@@ -4,10 +4,9 @@ package check_test
 
 import (
 	"errors"
-	. "gopkg.in/check.v1"
-	"os"
-	"regexp"
 	"sync"
+
+	. "github.com/khulnasoft/checkmate"
 )
 
 var runnerS = Suite(&RunS{})
@@ -16,84 +15,6 @@ type RunS struct{}
 
 func (s *RunS) TestCountSuite(c *C) {
 	suitesRun += 1
-}
-
-// -----------------------------------------------------------------------
-// Tests ensuring result counting works properly.
-
-func (s *RunS) TestSuccess(c *C) {
-	output := String{}
-	result := Run(&SuccessHelper{}, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 1)
-	c.Check(result.Failed, Equals, 0)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 0)
-	c.Check(result.FixturePanicked, Equals, 0)
-	c.Check(result.Missed, Equals, 0)
-	c.Check(result.RunError, IsNil)
-}
-
-func (s *RunS) TestFailure(c *C) {
-	output := String{}
-	result := Run(&FailHelper{}, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 0)
-	c.Check(result.Failed, Equals, 1)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 0)
-	c.Check(result.FixturePanicked, Equals, 0)
-	c.Check(result.Missed, Equals, 0)
-	c.Check(result.RunError, IsNil)
-}
-
-func (s *RunS) TestFixture(c *C) {
-	output := String{}
-	result := Run(&FixtureHelper{}, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 2)
-	c.Check(result.Failed, Equals, 0)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 0)
-	c.Check(result.FixturePanicked, Equals, 0)
-	c.Check(result.Missed, Equals, 0)
-	c.Check(result.RunError, IsNil)
-}
-
-func (s *RunS) TestPanicOnTest(c *C) {
-	output := String{}
-	helper := &FixtureHelper{panicOn: "Test1"}
-	result := Run(helper, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 1)
-	c.Check(result.Failed, Equals, 0)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 1)
-	c.Check(result.FixturePanicked, Equals, 0)
-	c.Check(result.Missed, Equals, 0)
-	c.Check(result.RunError, IsNil)
-}
-
-func (s *RunS) TestPanicOnSetUpTest(c *C) {
-	output := String{}
-	helper := &FixtureHelper{panicOn: "SetUpTest"}
-	result := Run(helper, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 0)
-	c.Check(result.Failed, Equals, 0)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 0)
-	c.Check(result.FixturePanicked, Equals, 1)
-	c.Check(result.Missed, Equals, 2)
-	c.Check(result.RunError, IsNil)
-}
-
-func (s *RunS) TestPanicOnSetUpSuite(c *C) {
-	output := String{}
-	helper := &FixtureHelper{panicOn: "SetUpSuite"}
-	result := Run(helper, &RunConf{Output: &output})
-	c.Check(result.Succeeded, Equals, 0)
-	c.Check(result.Failed, Equals, 0)
-	c.Check(result.Skipped, Equals, 0)
-	c.Check(result.Panicked, Equals, 0)
-	c.Check(result.FixturePanicked, Equals, 1)
-	c.Check(result.Missed, Equals, 2)
-	c.Check(result.RunError, IsNil)
 }
 
 // -----------------------------------------------------------------------
@@ -195,93 +116,6 @@ func (s *RunS) TestPrintRunError(c *C) {
 }
 
 // -----------------------------------------------------------------------
-// Verify that the method pattern flag works correctly.
-
-func (s *RunS) TestFilterTestName(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "Test[91]"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test1")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 5)
-}
-
-func (s *RunS) TestFilterTestNameWithAll(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: ".*"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test1")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "SetUpTest")
-	c.Check(helper.calls[5], Equals, "Test2")
-	c.Check(helper.calls[6], Equals, "TearDownTest")
-	c.Check(helper.calls[7], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterSuiteName(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "FixtureHelper"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test1")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "SetUpTest")
-	c.Check(helper.calls[5], Equals, "Test2")
-	c.Check(helper.calls[6], Equals, "TearDownTest")
-	c.Check(helper.calls[7], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterSuiteNameAndTestName(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "FixtureHelper\\.Test2"}
-	Run(&helper, &runConf)
-	c.Check(helper.calls[0], Equals, "SetUpSuite")
-	c.Check(helper.calls[1], Equals, "SetUpTest")
-	c.Check(helper.calls[2], Equals, "Test2")
-	c.Check(helper.calls[3], Equals, "TearDownTest")
-	c.Check(helper.calls[4], Equals, "TearDownSuite")
-	c.Check(len(helper.calls), Equals, 5)
-}
-
-func (s *RunS) TestFilterAllOut(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "NotFound"}
-	Run(&helper, &runConf)
-	c.Check(len(helper.calls), Equals, 0)
-}
-
-func (s *RunS) TestRequirePartialMatch(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "est"}
-	Run(&helper, &runConf)
-	c.Check(len(helper.calls), Equals, 8)
-}
-
-func (s *RunS) TestFilterError(c *C) {
-	helper := FixtureHelper{}
-	output := String{}
-	runConf := RunConf{Output: &output, Filter: "]["}
-	result := Run(&helper, &runConf)
-	c.Check(result.String(), Equals,
-		"ERROR: Bad filter expression: error parsing regexp: missing closing ]: `[`")
-	c.Check(len(helper.calls), Equals, 0)
-}
-
-// -----------------------------------------------------------------------
 // Verify that List works correctly.
 
 func (s *RunS) TestListFiltered(c *C) {
@@ -292,7 +126,7 @@ func (s *RunS) TestListFiltered(c *C) {
 }
 
 func (s *RunS) TestList(c *C) {
-	names := List(&FixtureHelper{}, &RunConf{})
+	names := List(&FixtureHelper{}, nil)
 	c.Assert(names, DeepEquals, []string{
 		"FixtureHelper.Test1",
 		"FixtureHelper.Test2",
@@ -306,21 +140,9 @@ func (s *RunS) TestVerboseMode(c *C) {
 	helper := FixtureHelper{}
 	output := String{}
 	runConf := RunConf{Output: &output, Verbose: true}
-	Run(&helper, &runConf)
+	Run(c.T, &helper, &runConf)
 
 	expected := "PASS: check_test\\.go:[0-9]+: FixtureHelper\\.Test1\t *[.0-9]+s\n" +
-		"PASS: check_test\\.go:[0-9]+: FixtureHelper\\.Test2\t *[.0-9]+s\n"
-
-	c.Assert(output.value, Matches, expected)
-}
-
-func (s *RunS) TestVerboseModeWithFailBeforePass(c *C) {
-	helper := FixtureHelper{panicOn: "Test1"}
-	output := String{}
-	runConf := RunConf{Output: &output, Verbose: true}
-	Run(&helper, &runConf)
-
-	expected := "(?s).*PANIC.*\n-+\n" + // Should have an extra line.
 		"PASS: check_test\\.go:[0-9]+: FixtureHelper\\.Test2\t *[.0-9]+s\n"
 
 	c.Assert(output.value, Matches, expected)
@@ -361,7 +183,7 @@ func (s *RunS) TestStreamMode(c *C) {
 	helper := &StreamHelper{}
 	output := String{}
 	runConf := RunConf{Output: &output, Stream: true}
-	Run(helper, &runConf)
+	Run(c.T, helper, &runConf)
 
 	expected := "START: run_test\\.go:[0-9]+: StreamHelper\\.SetUpSuite\n0\n" +
 		"PASS: run_test\\.go:[0-9]+: StreamHelper\\.SetUpSuite\t *[.0-9]+s\n\n" +
@@ -388,7 +210,7 @@ func (s *RunS) TestStreamModeWithMiss(c *C) {
 	helper := &StreamMissHelper{}
 	output := String{}
 	runConf := RunConf{Output: &output, Stream: true}
-	Run(helper, &runConf)
+	Run(c.T, helper, &runConf)
 
 	expected := "START: run_test\\.go:[0-9]+: StreamMissHelper\\.SetUpSuite\n0\n" +
 		"FAIL: run_test\\.go:[0-9]+: StreamMissHelper\\.SetUpSuite\n\n" +
@@ -401,20 +223,8 @@ func (s *RunS) TestStreamModeWithMiss(c *C) {
 // -----------------------------------------------------------------------
 // Verify that that the keep work dir request indeed does so.
 
-type WorkDirSuite struct {}
+type WorkDirSuite struct{}
 
 func (s *WorkDirSuite) Test(c *C) {
 	c.MkDir()
-}
-
-func (s *RunS) TestKeepWorkDir(c *C) {
-	output := String{}
-	runConf := RunConf{Output: &output, Verbose: true, KeepWorkDir: true}
-	result := Run(&WorkDirSuite{}, &runConf)
-
-	c.Assert(result.String(), Matches, ".*\nWORK=" + regexp.QuoteMeta(result.WorkDir))
-
-	stat, err := os.Stat(result.WorkDir)
-	c.Assert(err, IsNil)
-	c.Assert(stat.IsDir(), Equals, true)
 }

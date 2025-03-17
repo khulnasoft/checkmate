@@ -3,7 +3,7 @@
 package check_test
 
 import (
-	. "gopkg.in/check.v1"
+	. "github.com/khulnasoft/checkmate"
 )
 
 // -----------------------------------------------------------------------
@@ -38,7 +38,7 @@ func (s *integrationTestHelper) TestStructEqualFails(c *C) {
 func (s *integrationS) TestOutput(c *C) {
 	helper := integrationTestHelper{}
 	output := String{}
-	Run(&helper, &RunConf{Output: &output})
+	Run(c.T, &helper, &RunConf{Output: &output})
 	c.Assert(output.value, Equals, `
 ----------------------------------------------------------------------
 FAIL: integration_test.go:26: integrationTestHelper.TestIntEqualFails

@@ -1,7 +1,7 @@
 package check_test
 
 import (
-    .   "gopkg.in/check.v1"
+	. "github.com/khulnasoft/checkmate"
 )
 
 var _ = Suite(&PrinterS{})
